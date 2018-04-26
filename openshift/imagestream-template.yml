@@ -23,15 +23,15 @@ parameters:
 objects:
   - kind: ImageStream
     apiVersion: v1
-    metadata
+    metadata:
+      annotations:
+        openshift.io/generated-by: imagestream-template
       name: ${APP-NAME}
       creationTimestamp: null
       labels:
         component: ${APP-NAME}
         group: ${APP-NAMESPACE}
-        app: ${APP-NAME},
+        app: ${APP-NAME}
         provider: s2i
         version: ${APP-VERSION}
     spec: {}
-    status:
-      dockerImageRepository:
