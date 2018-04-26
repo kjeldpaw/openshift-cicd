@@ -26,12 +26,12 @@ objects:
     metadata:
       annotations:
         openshift.io/generated-by: imagestream-template
-      name: ${APP-NAME}
+      name: ${APP_NAME}
       creationTimestamp: null
       labels:
-        component: ${APP-NAME}
-        group: ${APP-NAMESPACE}
-        app: ${APP-NAME}
+        component: ${APP_NAME}
+        group: ${APP_NAMESPACE}
+        app: ${APP_NAME}
         provider: s2i
-        version: ${APP-VERSION}
+        version: ${APP_VERSION}
     spec: {}
