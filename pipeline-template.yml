@@ -1,4 +1,4 @@
-apiVersion": v1
+apiVersion: v1
 kind: Template
 labels: {}
 metadata:
@@ -60,9 +60,10 @@ objects:
                     def pom = readMavenPom file: 'pom.xml'
                     def appVersion = pom.version
 
-                    def imageStream = openshift.selector('imagestream', 'map')
+                    def imageStream = openshift.selector('is', '${APP_NAME}')
                     if(imageStream.count() == 0) {
-                      imageStream = openshift.process(readFile(file:'openshift/imagestream-template.json'), '-p', "APP_NAME=${APP_NAME}", "-p", "APP_VERSION=" + appVersion)
+                      imageStream = openshift.process(readFile(file:'openshift/imagestream-template.yml'), '-p', 'APP_NAME=${APP_NAME}', '-p', 'APP_VERSION=' + appVersion, '-p', 'APP_NAMESPACE=${APP_NAMESPACE)')
+                      openshift.create(imageStream)
                     }
 
                     def imageStreamObject = imageStream.object()
