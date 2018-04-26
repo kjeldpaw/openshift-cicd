@@ -4,7 +4,6 @@ labels: {}
 metadata:
   annotations:
     description: This template deploys an image stream to the defined namespace
-    iconClass: icon-java
   labels: {}
   name: imagestream-template
 parameters:
@@ -15,7 +14,7 @@ parameters:
   - name: APP_VERSION
     displayName: Application Version
     required: true
-    description: The application version.
+    description: The version assigned to the application.
   - name: APP_NAMESPACE
     displayName: Application namespace
     required: true

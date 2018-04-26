@@ -53,22 +53,39 @@ objects:
               stage ('clone') {
                   git branch: '${GIT_REF}', url:'${GIT_REPO}', credentialsId: '${APP_NAMESPACE}-${GIT_SECRET}'
               }
-              stage('build') {
-                openshift.withCluster() {
-                  openshift.withProject('${APP_NAMESPACE}') {
+              stage ('build application') {
+                sh 'mvn -DskipTests=true clean package -s configuration/settings.xml'
+              }
+              stage('build image') {
+                sh 'mkdir -p deployments'
+                sh 'cp target/*.jar deployments/'
 
-                    def pom = readMavenPom file: 'pom.xml'
-                    def appVersion = pom.version
+                def pom = readMavenPom file: 'pom.xml'
+                def appVersion = pom.version
 
-                    def imageStream = openshift.selector('is', '${APP_NAME}')
-                    if(imageStream.count() == 0) {
-                      imageStream = openshift.process(readFile(file:'openshift/imagestream-template.yml'), '-p', 'APP_NAME=${APP_NAME}', '-p', 'APP_VERSION=' + appVersion, '-p', 'APP_NAMESPACE=${APP_NAMESPACE)')
-                      openshift.create(imageStream)
-                    }
+                def is = openshift.selector('is', '${APP_NAME}')
+                def s2iImageStreamObject = openshift.process(readFile(file:'openshift/imagestream-template.yml'), '-p', 'APP_NAME=${APP_NAME}', '-p', 'APP_NAMESPACE=${APP_NAMESPACE)', '-p', 'APP_VERSION=' + appVersion)
+                if (is.count() == 0) {
+                  openshift.create(s2iImageStreamObject)
+                } else {
+                  openshift.apply(s2iImageStreamObject)
+                }
 
-                    def imageStreamObject = imageStream.object()
-                    imageStreamObject.metadata.labels.version.set(appVersion)
+                def bc = openshift.selector('bc', '${APP_NAME}')
+                def s2iBuildConfigObject = openshift.process(readFile(file:'openshift/buildconfig-template.yml'), '-p', 'APP_NAME=${APP_NAME}', '-p', 'APP_VERSION=' + appVersion)
+                def s2iBuildConfig = bc.count() == 0 ? openshift.create(s2iBuildConfigObject) : openshift.apply(s2iBuildConfigObject)
+                def buildConfig = s2iBuildConfig.narrow('bc')
+
+                buildConfig.startBuild('--from-dir=deployments')
+                def builds = buildConfig.related('builds')
+                timeout(2) {
+                  builds.untilEach(1) {
+                    return it.object().status == 'Complete'
                   }
                 }
+                openshift.tag('${APP_NAMESPACE}/${APP_NAME}:latest', '${APP_NAMESPACE}/${APP_NAME}:' + appVersion)
+              }
+              stage('deploy') {
+
               }
             }
