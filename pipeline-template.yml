@@ -42,36 +42,32 @@ objects:
         git:
           ref: ${GIT_REF}
           uri: ${GIT_REPO}
-      sourceSecret:
-        name: ${GIT_SECRET}
-      type: Git
-    triggers:
-      - bitbucket:
-          secret: ${BUILD_SECRET}
-        type: Bitbucket
-    strategy:
-      jenkinsPipelineStrategy:
-        type: JenkinsPipeline
-        jenkinsfile: |-
-          node('maven') {
-            stage ('clone') {
-                git branch: '${GIT_REF}', url:'${GIT_REPO}', credentialsId: '${APP_NAMESPACE}-{GIT_SECRET}'
-            }
-            stage('build') {
-              openshift.withCluster() {
-                openshift.withProject('${APP_NAMESPACE}') {
+        sourceSecret:
+          name: ${GIT_SECRET}
+        type: Git
+      strategy:
+        jenkinsPipelineStrategy:
+          type: JenkinsPipeline
+          jenkinsfile: |-
+            node('maven') {
+              stage ('clone') {
+                  git branch: '${GIT_REF}', url:'${GIT_REPO}', credentialsId: '${APP_NAMESPACE}-${GIT_SECRET}'
+              }
+              stage('build') {
+                openshift.withCluster() {
+                  openshift.withProject('${APP_NAMESPACE}') {
 
-                  def pom = readMavenPom file: 'pom.xml'
-                  def appVersion = pom.version
+                    def pom = readMavenPom file: 'pom.xml'
+                    def appVersion = pom.version
 
-                  def imageStream = openshift.selector('imagestream', 'map')
-                  if(imageStream.count() == 0) {
-                    imageStream = openshift.process(readFile(file:'openshift/imagestream-template.json'), '-p', "APP_NAME=${APP_NAME}", "-p", "APP_VERSION=" + appVersion)
+                    def imageStream = openshift.selector('imagestream', 'map')
+                    if(imageStream.count() == 0) {
+                      imageStream = openshift.process(readFile(file:'openshift/imagestream-template.json'), '-p', "APP_NAME=${APP_NAME}", "-p", "APP_VERSION=" + appVersion)
+                    }
+
+                    def imageStreamObject = imageStream.object()
+                    imageStreamObject.metadata.labels.version.set(appVersion)
                   }
-
-                  def imageStreamObject = imageStream.object()
-                  imageStreamObject.metadata.labels.version.set(appVersion)
                 }
               }
             }
-          }
